@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hoa cho em — Quà 20/10</title>
+<style>
+  :root {
+    --bg1:#fff8fb;
+    --bg2:#fff0f6;
+    --panel:#fff;
+    --accent:#ff6b9a;
+    --text-primary:#4a4a4a;
+    --shadow-color: rgba(255,107,154,0.15);
+  }
+  html,body{height:100%;margin:0;font-family:'Segoe UI',system-ui,Arial;color:var(--text-primary)}
+  body{background:linear-gradient(180deg,var(--bg1),var(--bg2));display:flex;align-items:center;justify-content:center;padding:18px}
+  #stage{width:min(920px,96vw);aspect-ratio:16/9;display:block;border-radius:18px;box-shadow:0 20px 50px var(--shadow-color);overflow:hidden;background:linear-gradient(#fff,#fff7fb 70%);transition:transform 0.3s ease}
+  #stage:hover{transform:scale(1.005)}
+  .topbar{position:absolute;left:20px;top:18px;display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);box-shadow:0 4px 15px var(--shadow-color)}
+  .btn{padding:8px 14px;border-radius:10px;border:none;background:var(--panel);cursor:pointer;font-size:14px;color:var(--text-primary);transition:all 0.2s ease;box-shadow:0 2px 8px var(--shadow-color)}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px var(--shadow-color)}
+  .caption{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;padding:12px 20px;border-radius:14px;background:rgba(255,255,255,0.95);font-size:15px;max-width:86%;text-align:center;box-shadow:0 10px 30px var(--shadow-color);animation:fadeIn 0.5s ease}
+  .credits{position:absolute;right:18px;top:18px;font-size:13px;color:#666;text-shadow:0 1px 2px rgba(255,255,255,0.8)}
+  @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @keyframes popIn {
+    0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @media (max-width:600px){
+    .caption{font-size:13px;padding:10px}
+    .btn{padding:6px 10px;font-size:13px}
+  }
+</style>
+</head>
+<body>
+  <div id="stage" style="position:relative;width:100%;display:flex;justify-content:center;">
+      <div id="startScreen" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,240,245,0.92));z-index:40;backdrop-filter:blur(8px);">
+        <div style="text-align:center;padding:24px 32px;border-radius:20px;background:linear-gradient(180deg,#ffffff,#fff4f9);box-shadow:0 20px 50px var(--shadow-color);animation:popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+          <div style="margin-bottom:15px;font-size:32px">🌸</div>
+          <h2 style="margin:0 0 12px;font-size:24px;color:#6b5160;font-weight:600">Hoa Cho Em — Deluxe</h2>
+          <p style="margin:0 0 20px;color:#7a6b78;line-height:1.5">Một món quà nhỏ nhân ngày 20/10<br/>Chúc em luôn xinh đẹp và hạnh phúc 💝</p>
+          <button id="startBtn" class="btn" style="font-size:16px;padding:12px 24px;background:var(--accent);color:white;font-weight:500">💐 Bắt đầu</button>
+        </div>
+      </div>
+      <canvas id="gameCanvas" style="width:100%;height:100%;display:block"></canvas>
+      <div class="topbar">
+        <button id="musicBtn" class="btn">Bật nhạc</button>
+        <div style="font-size:14px;color:#666">Dùng phím ← → hoặc chạm để di chuyển</div>
+      </div>
+      <div class="credits">Quà 20/10 — Tặng em 💐</div>
+      <div id="caption" class="caption" style="display:none"></div>
+      <div id="endScreen" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,240,245,0.92);z-index:50;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.8s ease;">
+        <div style="text-align:center;padding:24px 32px;border-radius:20px;background:linear-gradient(180deg,#ffffff,#fff4f9);box-shadow:0 20px 50px var(--shadow-color);animation:popIn 0.6s;">
+          <div style="margin-bottom:15px;font-size:32px">💖</div>
+          <h2 style="margin:0 0 12px;font-size:24px;color:#6b5160;font-weight:600">Chúc mừng 20/10!</h2>
+          <p style="margin:0;color:#7a6b78;line-height:1.5">Chúc em tất cả những điều tốt đẹp nhất!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+let canvas, ctx, captionEl, musicBtn;
+let W = 1280, H = 720;
+let scene = {};
+let frameId = null;
+let audioCtx = null, oscillators = [];
+
+// ==========================================================
+// CẬP NHẬT: Mảng lời chúc mới
+// ==========================================================
+const wishes = [
+  "Chúc em có một ngày 20/10 thật vui vẻ và ý nghĩa nhé.",
+  "Mong em lúc nào cũng mỉm cười, vì nụ cười của em thật sự rất xinh.",
+  "Có em ở bên, mọi thứ xung quanh dường như cũng vui vẻ hơn nhiều.",
+  "Chúc cho cô gái đáng yêu này sẽ luôn gặp được những điều may mắn và tốt đẹp.",
+  "Chúc mừng em nhân ngày đặc biệt này! 💐"
+];
+
+function initializeCanvas() {
+  try {
+    canvas = document.getElementById('gameCanvas');
+    if (!canvas) throw new Error('Canvas element not found');
+    ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    captionEl = document.getElementById('caption');
+    musicBtn = document.getElementById('musicBtn');
+    const stage = document.getElementById('stage');
+    if (stage) {
+      const rect = stage.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      W = rect.width;
+      H = rect.height;
+    }
+    return true;
+  } catch(e) {
+    console.error('Canvas initialization error:', e);
+    showErrorMessage('Không thể khởi tạo game. Vui lòng tải lại trang.');
+    return false;
+  }
+}
+
+function showErrorMessage(message) {
+  const errorDiv = document.createElement('div');
+  errorDiv.style.cssText = `
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, #fff, #fff8fb); padding: 20px 30px;
+    border-radius: 15px; box-shadow: 0 10px 40px rgba(255,107,154,0.2);
+    text-align: center; z-index: 1000; font-size: 16px; color: #4a4a4a;
+    max-width: 80%; border: 1px solid rgba(255,107,154,0.1);
+  `;
+  errorDiv.innerHTML = `⚠️ ${message}`;
+  document.body.appendChild(errorDiv);
+  setTimeout(() => { errorDiv.remove(); }, 5000);
+}
+
+function placeCharacters(){
+  const baseline = H * 0.6 - 24;
+  if (scene.player) scene.player.y = baseline - 64 * 0.6;
+  if (scene.npc) scene.npc.y = baseline - 64 * 0.6;
+}
+
+function resize() {
+  try {
+    const stage = document.getElementById('stage');
+    if (!stage || !canvas || !ctx) return;
+    const rect = stage.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    if (rect.width <= 0 || rect.height <= 0) return;
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = rect.width;
+    H = rect.height;
+    ctx.imageSmoothingEnabled = false;
+    placeCharacters();
+  } catch(e) {
+    console.error('Resize error:', e);
+  }
+}
+
+function makeSpriteHer(){
+  const s = 64;
+  const off = document.createElement('canvas');
+  off.width = s;
+  off.height = s;
+  const g = off.getContext('2d');
+  g.clearRect(0,0,s,s);
+
+  // Tóc: Thêm highlight
+  g.fillStyle = '#2d201a'; // Nền tóc sậm
+  g.beginPath();
+  g.moveTo(6, 22);
+  g.bezierCurveTo(15, 5, 49, 5, 58, 22);
+  g.bezierCurveTo(62, 35, 58, 45, 58, 45);
+  g.quadraticCurveTo(32, 50, 6, 45);
+  g.bezierCurveTo(6, 45, 2, 35, 6, 22);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.1)'; // Highlight nhẹ
+  g.beginPath();
+  g.moveTo(15, 12);
+  g.bezierCurveTo(25, 8, 40, 8, 50, 15);
+  g.bezierCurveTo(35, 22, 25, 22, 15, 12);
+  g.fill();
+
+  // Mặt
+  const faceGradient = g.createRadialGradient(32, 28, 0, 32, 28, 14);
+  faceGradient.addColorStop(0, '#ffeadb');
+  faceGradient.addColorStop(1, '#ffdcc5');
+  g.fillStyle = faceGradient;
+  g.beginPath();
+  g.ellipse(32, 30, 12, 14, 0, 0, Math.PI*2);
+  g.fill();
+
+  // Má hồng
+  const blushGradient = g.createRadialGradient(0, 0, 1, 0, 0, 6);
+  blushGradient.addColorStop(0, 'rgba(255, 150, 150, 0.4)');
+  blushGradient.addColorStop(1, 'rgba(255, 150, 150, 0)');
+  g.save();
+  g.translate(24, 33);
+  g.fillStyle = blushGradient;
+  g.fillRect(-6, -6, 12, 12);
+  g.restore();
+  g.save();
+  g.translate(40, 33);
+  g.fillStyle = blushGradient;
+  g.fillRect(-6, -6, 12, 12);
+  g.restore();
+    
+  // Mắt: Thêm đốm sáng
+  ['26,30', '38,30'].forEach(pos => {
+    const [x, y] = pos.split(',').map(Number);
+    g.fillStyle = '#4a4a4a';
+    g.beginPath();
+    g.ellipse(x, y, 2, 2.5, 0, 0, Math.PI*2);
+    g.fill();
+    g.fillStyle = '#fff';
+    g.fillRect(x - 1, y - 1, 1, 1); // Đốm sáng
+  });
+
+  // Nụ cười mỉm
+  g.strokeStyle = '#c17a74';
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(30, 36);
+  g.quadraticCurveTo(32, 38, 34, 36);
+  g.stroke();
+
+  // Nón lá
+  const hatGradient = g.createLinearGradient(32, -4, 32, 12);
+  hatGradient.addColorStop(0, '#f7e9d3');
+  hatGradient.addColorStop(1, '#e6cfad');
+  g.fillStyle = hatGradient;
+  g.beginPath();
+  g.moveTo(5, 12);
+  g.quadraticCurveTo(32, -6, 59, 12);
+  g.lineTo(5, 12);
+  g.fill();
+
+  // Áo dài
+  const shirtGradient = g.createLinearGradient(20, 44, 44, 56);
+  shirtGradient.addColorStop(0, '#ffffff');
+  shirtGradient.addColorStop(1, '#f0f0f0');
+  g.fillStyle = shirtGradient;
+  g.beginPath();
+  g.moveTo(20, 44);
+  g.lineTo(44, 44);
+  g.quadraticCurveTo(44, 56, 44, 56);
+  g.lineTo(20, 56);
+  g.quadraticCurveTo(20, 56, 20, 44);
+  g.fill();
+
+  // Váy: Thêm gradient
+  const skirtGradient = g.createLinearGradient(20, 56, 20, 66);
+  skirtGradient.addColorStop(0, '#ffcde5');
+  skirtGradient.addColorStop(1, '#ffafcf');
+  g.fillStyle = skirtGradient;
+  g.beginPath();
+  g.moveTo(20, 56);
+  g.lineTo(44, 56);
+  g.quadraticCurveTo(44, 66, 44, 66);
+  g.lineTo(20, 66);
+  g.quadraticCurveTo(20, 66, 20, 56);
+  g.fill();
+
+  return off;
+}
+
+function makeSpriteYou(){
+  const s = 64;
+  const off = document.createElement('canvas');
+  off.width = s;
+  off.height = s;
+  const g = off.getContext('2d');
+  g.clearRect(0,0,s,s);
+
+  // Tóc: Thêm highlight
+  g.fillStyle = '#2b2b2b';
+  g.beginPath();
+  g.moveTo(14, 20);
+  g.bezierCurveTo(20, 10, 44, 10, 50, 20);
+  g.bezierCurveTo(54, 28, 50, 34, 32, 34);
+  g.bezierCurveTo(14, 34, 10, 28, 14, 20);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.1)';
+  g.beginPath();
+  g.moveTo(20, 14);
+  g.bezierCurveTo(28, 11, 38, 11, 45, 16);
+  g.bezierCurveTo(35, 20, 28, 20, 20, 14);
+  g.fill();
+
+  // Mặt
+  const faceGradient = g.createRadialGradient(32, 28, 0, 32, 28, 14);
+  faceGradient.addColorStop(0, '#ffeadb');
+  faceGradient.addColorStop(1, '#ffdcc5');
+  g.fillStyle = faceGradient;
+  g.beginPath();
+  g.ellipse(32, 30, 11, 13, 0, 0, Math.PI*2);
+  g.fill();
+
+  // Mắt: Thêm đốm sáng
+  [28, 36].forEach(x => {
+    g.fillStyle = '#2a2a2a';
+    g.beginPath();
+    g.ellipse(x, 28, 1.8, 2.2, 0, 0, Math.PI*2);
+    g.fill();
+    g.fillStyle = '#fff';
+    g.fillRect(x, 27, 1, 1);
+  });
+    
+  // Nụ cười
+  g.strokeStyle = '#c17a74';
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(30, 34);
+  g.quadraticCurveTo(32, 35.5, 34, 34);
+  g.stroke();
+
+  // Áo: Sơ mi xanh có cổ
+  const shirtGradient = g.createLinearGradient(20, 44, 44, 58);
+  shirtGradient.addColorStop(0, '#e0f2ff'); // Màu xanh nhạt
+  shirtGradient.addColorStop(1, '#cde6f8');
+  g.fillStyle = shirtGradient;
+  g.beginPath();
+  g.moveTo(20, 44);
+  g.lineTo(44, 44);
+  g.quadraticCurveTo(44, 51, 44, 58);
+  g.lineTo(20, 58);
+  g.quadraticCurveTo(20, 51, 20, 44);
+  g.fill();
+  
+  // Cổ áo
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.moveTo(28,44); g.lineTo(30,48); g.lineTo(32,44); g.closePath();
+  g.moveTo(36,44); g.lineTo(34,48); g.lineTo(32,44); g.closePath();
+  g.fill();
+
+  // Bó hoa
+  g.save();
+  g.translate(22, 44);
+  g.fillStyle = '#5b9b59';
+  g.beginPath();
+  g.moveTo(-2, 8); g.lineTo(2, 8); g.lineTo(2, 18); g.lineTo(-2, 18);
+  g.closePath();
+  g.fill();
+  const flowers = [
+    {color: '#ff6b9a', pos: -8}, {color: '#ffd14d', pos: -4},
+    {color: '#6bd3ff', pos: 0}, {color: '#d88bff', pos: 4},
+    {color: '#fff', pos: 8}
+  ];
+  flowers.forEach(({color, pos}) => {
+    g.fillStyle = color;
+    for(let i = 0; i < 5; i++) {
+      const angle = (i/5) * Math.PI * 2;
+      g.save(); g.translate(pos, 4); g.rotate(angle);
+      g.beginPath(); g.moveTo(0, 0);
+      g.quadraticCurveTo(2, -1, 3, -3); g.quadraticCurveTo(1, -4, 0, -4);
+      g.quadraticCurveTo(-1, -4, -3, -3); g.quadraticCurveTo(-2, -1, 0, 0);
+      g.fill(); g.restore();
+    }
+    g.fillStyle = '#fff9c4'; g.beginPath(); g.arc(pos, 4, 1.5, 0, Math.PI*2); g.fill();
+  });
+  g.restore();
+  return off;
+}
+
+const spriteHer = makeSpriteHer();
+const spriteYou = makeSpriteYou();
+
+function drawSpriteTo(ctx, sprite, x, y, scale=1, flip=false){
+  ctx.save();
+  if (flip){ 
+    ctx.translate(x+64*scale, y); 
+    ctx.scale(-1,1); 
+    ctx.drawImage(sprite, 0,0,64,64, 0,0,64*scale,64*scale); 
+  } else {
+    ctx.drawImage(sprite,0,0,64,64,x,y,64*scale,64*scale);
+  }
+  ctx.restore();
+}
+
+function initializeScene() {
+  scene = {
+    player: { x: 120, y: 0, speed: 140, dir: 1, frame: 0, walking: false },
+    npc: { x: 820, y: 0 },
+    flowerGiven: false, time: 0, sparkles: [], stage: 0,
+    butterflies: [], flowers: [], dialogueShown: false, dialogTriggered: false
+  };
+  placeCharacters();
+}
+
+function createSparkle(x, y) {
+  const colors = ['#ff6b9a', '#ffd14d', '#6bd3ff', '#d88bff'];
+  for(let i = 0; i < 3; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 2;
+    scene.sparkles.push({
+      x, y, life: 1, size: 3 + Math.random() * 4,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    });
+  }
+}
+
+function updateSparkles(dt) {
+  for (let i = scene.sparkles.length - 1; i >= 0; i--) {
+    const sparkle = scene.sparkles[i];
+    sparkle.life -= dt * 1.5;
+    sparkle.x += sparkle.vx;
+    sparkle.y += sparkle.vy;
+    sparkle.vy += dt * 2;
+    if (sparkle.life <= 0) {
+      scene.sparkles.splice(i, 1);
+    }
+  }
+}
+
+function drawSparkles(ctx) {
+  ctx.save();
+  for (const sparkle of scene.sparkles) {
+    ctx.globalAlpha = sparkle.life;
+    ctx.fillStyle = sparkle.color;
+    ctx.beginPath();
+    ctx.arc(sparkle.x, sparkle.y, sparkle.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key] = true; });
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+let captionTimeout = null;
+function showCaption(text, duration=6000){ 
+  if (!captionEl) return;
+  captionEl.style.display = 'block'; 
+  captionEl.textContent = text; 
+  if (captionTimeout) clearTimeout(captionTimeout); 
+  captionTimeout = setTimeout(() => { 
+    captionEl.style.display = 'none'; 
+  }, duration); 
+}
+
+function startWishesSequence() {
+  let delay = 1000;
+  const duration = 4000;
+  wishes.forEach((wish, index) => {
+    setTimeout(() => {
+      showCaption(wish, duration - 500);
+      for(let i = 0; i < 5; i++) {
+         createSparkle(scene.npc.x + Math.random() * 80 - 40, scene.npc.y - Math.random() * 40);
+      }
+      if (index === wishes.length - 1) {
+          setTimeout(showFinalMessage, duration);
+      }
+    }, delay);
+    delay += duration;
+  });
+}
+
+function showFinalMessage() {
+    const endScreen = document.getElementById('endScreen');
+    if (endScreen) {
+        endScreen.style.display = 'flex';
+        setTimeout(() => { endScreen.style.opacity = '1'; }, 100);
+    }
+}
+
+function startMusic(){ 
+  try {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.05;
+    gain.connect(audioCtx.destination);
+    const freqs = [220, 277.18, 329.63];
+    for(let f of freqs){
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 900;
+      osc.connect(filter);
+      filter.connect(gain);
+      osc.start();
+      oscillators.push(osc);
+    }
+  } catch(e) {
+    console.warn('Audio not supported:', e);
+    if (musicBtn) musicBtn.style.display = 'none';
+  }
+}
+
+function stopMusic(){ 
+  if(!audioCtx) return; 
+  for(let o of oscillators) {
+    try { o.stop(); } catch(e) {}
+  }
+  audioCtx.close(); 
+  audioCtx = null; 
+  oscillators = []; 
+}
+
+let lastTime = performance.now();
+function gameLoop(now){ 
+  try {
+    const dt = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
+    update(dt);
+    render();
+    if (!window.stopGame) {
+      frameId = requestAnimationFrame(gameLoop);
+    }
+  } catch(e) {
+    console.error('Game loop error:', e);
+  }
+}
+
+function createButterfly(x, y) {
+  return {
+    x, y, time: 0, speed: 0.5 + Math.random() * 0.5,
+    scale: 0.3 + Math.random() * 0.2
+  };
+}
+
+function createFallingFlower(x) {
+  return {
+    x, y: -20, rotation: Math.random() * Math.PI * 2,
+    rotationSpeed: (Math.random() - 0.5) * 0.1,
+    fallSpeed: 0.5 + Math.random() * 1,
+    scale: 0.3 + Math.random() * 0.3,
+    color: ['#ff6b9a', '#ff94b8', '#ff799f'][Math.floor(Math.random() * 3)]
+  };
+}
+
+function update(dt){ 
+  scene.time += dt;
+  updateSparkles(dt);
+  if (scene.butterflies.length < 5 && Math.random() < 0.02) {
+    scene.butterflies.push(createButterfly(
+      Math.random() * W, H * 0.3 + Math.random() * (H * 0.3)
+    ));
+  }
+  for (let i = scene.butterflies.length - 1; i >= 0; i--) {
+    const butterfly = scene.butterflies[i];
+    butterfly.time += dt;
+    butterfly.x += Math.sin(butterfly.time) * butterfly.speed;
+    butterfly.y += Math.cos(butterfly.time * 0.5) * butterfly.speed * 0.5;
+    if (butterfly.x < -50 || butterfly.x > W + 50) {
+      scene.butterflies.splice(i, 1);
+    }
+  }
+  if (Math.random() < 0.03) {
+    scene.flowers.push(createFallingFlower(Math.random() * W));
+  }
+  for (let i = scene.flowers.length - 1; i >= 0; i--) {
+    const flower = scene.flowers[i];
+    flower.y += flower.fallSpeed;
+    flower.rotation += flower.rotationSpeed;
+    if (flower.y > H + 20) {
+      scene.flowers.splice(i, 1);
+    }
+  }
+  if (scene.flowerGiven) {
+    const targetX = scene.player.x + 50;
+    const dx = targetX - scene.npc.x;
+    if (Math.abs(dx) > 1) {
+      scene.npc.x += dx * dt * 2;
+    }
+  }
+  scene.player.walking = false;
+  if (!scene.flowerGiven) {
+      if (keys['ArrowLeft'] || keys['a']){ 
+        scene.player.speed = Math.min(scene.player.speed + 800 * dt, 240);
+        scene.player.x -= scene.player.speed * dt; 
+        scene.player.dir = -1; 
+        scene.player.walking = true; 
+      } else if (keys['ArrowRight'] || keys['d']){ 
+        scene.player.speed = Math.min(scene.player.speed + 800 * dt, 240);
+        scene.player.x += scene.player.speed * dt; 
+        scene.player.dir = 1; 
+        scene.player.walking = true; 
+      } else {
+        scene.player.speed = Math.max(0, scene.player.speed - 1200 * dt);
+      }
+  }
+  const leftLimit = 60;
+  const rightLimit = W - 60 - 64 * 0.8;
+  scene.player.x = Math.max(leftLimit, Math.min(scene.player.x, rightLimit));
+  if (scene.player.walking) {
+    scene.player.frame = (Math.floor(scene.time * 8) % 2);
+  } else {
+    scene.player.frame = 0;
+  }
+  const distance = Math.abs(scene.player.x - scene.npc.x);
+  if (distance < 60 && !scene.flowerGiven) {
+      scene.flowerGiven = true;
+      scene.player.walking = false;
+      Object.keys(keys).forEach(k => keys[k] = false);
+      startWishesSequence();
+  }
+  if (scene.flowerGiven) {
+    if (!scene.giveTime) scene.giveTime = 0;
+    scene.giveTime += dt;
+    if (Math.random() < 0.1) {
+      createSparkle(scene.player.x + Math.random() * 40 - 20, scene.player.y - Math.random() * 40);
+    }
+  }
+}
+
+function render(){
+  if (!ctx) return;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, H);
+  skyGradient.addColorStop(0, '#fff8fb');
+  skyGradient.addColorStop(1, '#fff0f6');
+  ctx.fillStyle = skyGradient;
+  ctx.fillRect(0, 0, W, H);
+  
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  for(let i = 0; i < 3; i++) {
+    const x = ((scene.time * (20 + i * 10)) % (W + 300)) - 150;
+    const y = H * (0.2 + i * 0.15);
+    drawCloud(ctx, x, y, 80 + i * 20);
+  }
+  
+  function drawHill(x, y, width, height, colors) {
+    const gradient = ctx.createLinearGradient(x, y - height, x, y + height/2);
+    colors.forEach((color, i) => {
+      gradient.addColorStop(i/(colors.length-1), color);
+    });
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(x - width/2, y + height/2);
+    ctx.quadraticCurveTo(x, y - height/2, x + width/2, y + height/2);
+    ctx.lineTo(x + width/2, H);
+    ctx.lineTo(x - width/2, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  
+  drawHill(W*0.3, H*0.55, W*0.8, 80, ['#fff5fa', '#ffe4f0', '#ffd6e5']);
+  drawHill(W*0.7, H*0.6, W*0.9, 90, ['#fff3f8', '#ffe9f2', '#ffd9e7']);
+  drawHill(W*0.5, H*0.58, W*0.7, 70, ['#fff6fb', '#ffe7f1', '#ffdbe8']);
+
+  const pathY = H * 0.6;
+  const pathGradient = ctx.createLinearGradient(0, pathY, 0, H);
+  pathGradient.addColorStop(0, '#fff6fb');
+  pathGradient.addColorStop(1, '#ffe9f2');
+  ctx.fillStyle = pathGradient;
+  ctx.fillRect(0, pathY, W, H - pathY);
+  
+  ctx.save();
+  for(let i = 0; i < 20; i++) {
+    const baseX = W * 0.06 + i * (W * 0.88 / 20);
+    const shift = Math.sin(scene.time * 1.5 + i * 0.5) * 6;
+    const baseY = pathY - 28 + (i % 3) * 4;
+    drawLittleFlower(baseX + shift, baseY);
+  }
+  ctx.restore();
+
+  const idleBobY = Math.sin(scene.time * 2.5) * 1.5;
+  const playerBobY = scene.player.walking ? 0 : Math.sin(scene.time * 2.5 + 0.5) * 1.5;
+
+  const npcScale = 0.9;
+  drawSpriteTo(ctx, spriteYou, scene.npc.x, scene.npc.y + idleBobY, npcScale, true);
+  
+  const playerScale = 0.9;
+  drawSpriteTo(ctx, spriteHer, scene.player.x, scene.player.y + playerBobY, playerScale, scene.player.dir < 0);
+
+  if (scene.flowerGiven){ 
+    const t = scene.time * 2; 
+    for(let i = 0; i < 5; i++){ 
+      const heartBaseX = (scene.player.x + scene.npc.x) / 2 + 32;
+      const hx = heartBaseX + Math.sin(t + i) * 10 + (i - 2) * 8; 
+      const hy = scene.player.y - 30 - i * 8 - Math.abs(Math.sin(t * 1.2 + i)) * 6; 
+      const scale = 8 + Math.sin(t * 1.5 + i) * 1.5;
+      drawHeart(ctx, hx, hy, scale); 
+    }
+  }
+
+  for (const butterfly of scene.butterflies) {
+    drawButterfly(ctx, butterfly);
+  }
+  
+  for (const flower of scene.flowers) {
+    ctx.save();
+    ctx.translate(flower.x, flower.y);
+    ctx.rotate(flower.rotation);
+    drawLittleFlower(0, 0, flower.color, flower.scale);
+    ctx.restore();
+  }
+  
+  drawSparkles(ctx);
+}
+
+function drawCloud(ctx, x, y, size) {
+  ctx.save();
+  ctx.translate(x, y);
+  for(let i = 0; i < 5; i++) {
+    const dx = i * 20 - 40;
+    const dy = Math.sin(i * 1.5) * 10;
+    const radius = 25 + Math.sin(i * 2.5) * 10;
+    ctx.beginPath();
+    ctx.arc(dx, dy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawLittleFlower(x, y, color = '#ff6b9a', scale = 1) { 
+  ctx.save(); 
+  ctx.translate(x, y); 
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#5b9b59';
+  ctx.fillRect(-1, 6, 2, 8);
+  ctx.fillStyle = color;
+  for(let i = 0; i < 5; i++) {
+    ctx.save();
+    const angle = (i * Math.PI * 2 / 5);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(4, -3, 0, -8);
+    ctx.quadraticCurveTo(-4, -3, 0, 0);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#fff9c4';
+  ctx.beginPath();
+  ctx.arc(0, 0, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHeart(ctx, x, y, size) { 
+  ctx.save(); 
+  ctx.translate(x, y); 
+  ctx.scale(size/16, size/16); 
+  const gradient = ctx.createRadialGradient(0, 8, 0, 0, 8, 20);
+  gradient.addColorStop(0, '#ff6b9a');
+  gradient.addColorStop(1, '#ff4081');
+  ctx.fillStyle = gradient;
+  ctx.beginPath(); 
+  ctx.moveTo(0, 0); 
+  ctx.bezierCurveTo(6, -8, 16, -8, 16, 0); 
+  ctx.bezierCurveTo(16, 10, 8, 18, 0, 24); 
+  ctx.bezierCurveTo(-8, 18, -16, 10, -16, 0); 
+  ctx.bezierCurveTo(-16, -8, -6, -8, 0, 0); 
+  ctx.fill();
+  ctx.restore(); 
+}
+
+function drawButterfly(ctx, butterfly) {
+  ctx.save();
+  ctx.translate(butterfly.x, butterfly.y);
+  ctx.scale(butterfly.scale, butterfly.scale);
+  const wingAngle = Math.sin(butterfly.time * 8) * 0.5;
+  const colors = ['#ff9ab3', '#ff6b9a', '#ff4081'];
+  for(const side of [-1, 1]) {
+    ctx.save();
+    ctx.scale(side, 1);
+    ctx.rotate(wingAngle * side);
+    const gradient = ctx.createLinearGradient(0, 0, 20, 0);
+    gradient.addColorStop(0, colors[0]);
+    gradient.addColorStop(1, colors[2]);
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(10, -10, 20, -5, 20, 0);
+    ctx.bezierCurveTo(20, 10, 10, 15, 0, 0);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#2d2d2d';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 1, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function layout() {
+  if (!canvas || !scene.player || !scene.npc) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+  W = rect.width;
+  H = rect.height;
+  placeCharacters();
+  scene.npc.x = Math.floor(W * 0.75);
+  scene.player.x = Math.floor(W * 0.12);
+}
+
+function startGame() {
+  if (!initializeCanvas()) return;
+  initializeScene();
+  resize();
+  layout();
+  lastTime = performance.now();
+  if (!frameId) {
+    frameId = requestAnimationFrame(gameLoop);
+  }
+  showCaption('Di chuyển bằng phím mũi tên hoặc chạm/vuốt màn hình', 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const startBtn = document.getElementById('startBtn');
+  const startScreen = document.getElementById('startScreen');
+  if (startBtn && startScreen) {
+    startBtn.addEventListener('click', () => {
+      startScreen.style.opacity = '0';
+      startScreen.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => {
+        startScreen.style.display = 'none';
+        startGame();
+        try {
+          if (typeof startMusic === 'function' && !audioCtx) {
+            startMusic();
+          }
+        } catch(e) {
+          console.warn('Music error:', e);
+        }
+      }, 500);
+    });
+  }
+  
+  if (musicBtn) {
+    musicBtn.addEventListener('click', () => {
+      if (!audioCtx) {
+        startMusic();
+        musicBtn.textContent = 'Tắt nhạc';
+      } else {
+        stopMusic();
+        musicBtn.textContent = 'Bật nhạc';
+      }
+    });
+  }
+
+  let touchStartX = null;
+  const gameCanvas = document.getElementById('gameCanvas');
+  gameCanvas.addEventListener('touchstart', e => {
+      if (scene.flowerGiven) return;
+      touchStartX = e.touches[0].clientX;
+      e.preventDefault();
+  }, { passive: false });
+
+  gameCanvas.addEventListener('touchmove', e => {
+      if (touchStartX === null || scene.flowerGiven) return;
+      const touchX = e.touches[0].clientX;
+      const deltaX = touchX - touchStartX;
+      if (deltaX > 5) {
+          keys['ArrowRight'] = true;
+          keys['ArrowLeft'] = false;
+      } else if (deltaX < -5) {
+          keys['ArrowLeft'] = true;
+          keys['ArrowRight'] = false;
+      }
+      e.preventDefault();
+  }, { passive: false });
+
+  gameCanvas.addEventListener('touchend', e => {
+      touchStartX = null;
+      keys['ArrowLeft'] = false;
+      keys['ArrowRight'] = false;
+      e.preventDefault();
+  }, { passive: false });
+  
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      resize();
+      layout();
+    }, 100);
+  });
+});
+
+window.addEventListener('beforeunload', () => {
+  if (frameId) cancelAnimationFrame(frameId);
+  if (audioCtx) stopMusic();
+});
+
+</script>
+
+</body>
+</html>
